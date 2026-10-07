@@ -28,6 +28,15 @@
   sidebarStyle.id = 'chatgpt-shell-sidebar-touch';
   sidebarStyle.textContent = 'nav[role="navigation"] [role="listitem"], nav[role="navigation"] [aria-roledescription="sortable"] {touch-action:pan-y!important}';
   (document.head || document.documentElement).appendChild(sidebarStyle);
+  if (typeof CSS.registerProperty !== 'function') {
+    const layoutStyle = document.createElement('style');
+    layoutStyle.id = 'chatgpt-shell-legacy-layout';
+    layoutStyle.textContent = `
+      body > .fixed.-translate-y-full {translate:var(--tw-translate-x,0) -100%!important}
+      nav[role="navigation"] .after\\:bg-text\\/10::after {background:currentColor!important;opacity:.1!important}
+    `;
+    (document.head || document.documentElement).appendChild(layoutStyle);
+  }
   document.addEventListener('pointerdown', event => {
     if (event.pointerType !== 'touch' || !(event.target instanceof Element)) return;
     const nav = event.target.closest('nav[role="navigation"]');
