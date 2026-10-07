@@ -1,0 +1,37 @@
+name: 构建 iOS IPA
+
+on:
+  push:
+    branches: [main, "fix/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 显示 Xcode 版本
+        run: xcodebuild -version
+
+      - name: 验证兼容逻辑
+        run: node tests/legacy-regexp.test.cjs
+
+      - name: 构建无签名 IPA
+        run: bash scripts/build-unsigned-ipa.sh
+
+      - name: 核查安装包
+        run: python3 scripts/verify-ipa.py build/ChatGPTWeb-unsigned.ipa
+
+      - name: 上传 IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChatGPTWeb-unsigned
+          path: build/ChatGPTWeb-unsigned.ipa
+          if-no-files-found: error

@@ -1,0 +1,354 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* AppDelegate.swift */; };
+		A10000000000000000000002 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* SceneDelegate.swift */; };
+		A10000000000000000000003 /* WebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* WebViewController.swift */; };
+		A10000000000000000000004 /* WebViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* WebViewFactory.swift */; };
+		A10000000000000000000005 /* NavigationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* NavigationPolicy.swift */; };
+		A10000000000000000000006 /* NavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* NavigationCoordinator.swift */; };
+		A10000000000000000000007 /* AuthenticationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* AuthenticationCoordinator.swift */; };
+		A10000000000000000000008 /* DownloadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* DownloadCoordinator.swift */; };
+		A10000000000000000000009 /* WebErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* WebErrorView.swift */; };
+		A1000000000000000000000A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* Assets.xcassets */; };
+		B10000000000000000000010 /* ShellSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000010; };
+		B10000000000000000000011 /* ConversationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000011; };
+		B10000000000000000000012 /* PerformanceLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000012; };
+		B10000000000000000000013 /* KeyboardAccessoryController.m in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000013; };
+		B10000000000000000000015 /* chatgpt.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000015; };
+		B10000000000000000000016 /* legacy-regexp.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000016; };
+		B10000000000000000000017 /* legacy-module-loader.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000017; };
+		B10000000000000000000018 /* Vendor/acorn.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000018; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000000 /* ChatGPTWeb.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChatGPTWebView.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* WebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* WebViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewFactory.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* NavigationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationPolicy.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* NavigationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationCoordinator.swift; sourceTree = "<group>"; };
+		A20000000000000000000007 /* AuthenticationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationCoordinator.swift; sourceTree = "<group>"; };
+		A20000000000000000000008 /* DownloadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadCoordinator.swift; sourceTree = "<group>"; };
+		A20000000000000000000009 /* WebErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebErrorView.swift; sourceTree = "<group>"; };
+		A2000000000000000000000A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A2000000000000000000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B20000000000000000000010 /* ShellSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ShellSettings.swift"; sourceTree = "<group>"; };
+		B20000000000000000000011 /* ConversationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ConversationState.swift"; sourceTree = "<group>"; };
+		B20000000000000000000012 /* PerformanceLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PerformanceLogger.swift"; sourceTree = "<group>"; };
+		B20000000000000000000013 /* KeyboardAccessoryController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "KeyboardAccessoryController.m"; sourceTree = "<group>"; };
+		B20000000000000000000014 /* KeyboardAccessoryController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "KeyboardAccessoryController.h"; sourceTree = "<group>"; };
+		B20000000000000000000015 /* chatgpt.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "chatgpt.js"; sourceTree = "<group>"; };
+		B20000000000000000000016 /* legacy-regexp.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "legacy-regexp.js"; sourceTree = "<group>"; };
+		B20000000000000000000017 /* legacy-module-loader.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "legacy-module-loader.js"; sourceTree = "<group>"; };
+		B20000000000000000000018 /* Vendor/acorn.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "Vendor/acorn.js"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A40000000000000000000000 = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000001 /* ChatGPTWeb */,
+				A40000000000000000000002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A40000000000000000000001 /* ChatGPTWeb */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000003 /* App */,
+				A40000000000000000000004 /* Web */,
+				A40000000000000000000005 /* Authentication */,
+				A40000000000000000000006 /* Download */,
+				A40000000000000000000007 /* UI */,
+				A40000000000000000000008 /* Resources */,
+			);
+			path = ChatGPTWeb;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000000 /* ChatGPTWeb.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* AppDelegate.swift */,
+				A20000000000000000000002 /* SceneDelegate.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000004 /* Web */ = {
+			isa = PBXGroup;
+			children = (
+				B20000000000000000000014 /* KeyboardAccessoryController.h */,
+				B20000000000000000000013 /* KeyboardAccessoryController.m */,
+				B20000000000000000000012 /* PerformanceLogger.swift */,
+				B20000000000000000000011 /* ConversationState.swift */,
+				B20000000000000000000010 /* ShellSettings.swift */,
+				A20000000000000000000003 /* WebViewController.swift */,
+				A20000000000000000000004 /* WebViewFactory.swift */,
+				A20000000000000000000005 /* NavigationPolicy.swift */,
+				A20000000000000000000006 /* NavigationCoordinator.swift */,
+			);
+			path = Web;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000005 /* Authentication */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000007 /* AuthenticationCoordinator.swift */,
+			);
+			path = Authentication;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000006 /* Download */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000008 /* DownloadCoordinator.swift */,
+			);
+			path = Download;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000007 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000009 /* WebErrorView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B20000000000000000000018 /* Vendor/acorn.js */,
+				B20000000000000000000017 /* legacy-module-loader.js */,
+				B20000000000000000000016 /* legacy-regexp.js */,
+				B20000000000000000000015 /* chatgpt.js */,
+				A2000000000000000000000A /* Assets.xcassets */,
+				A2000000000000000000000B /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000000000000000000001 /* ChatGPTWeb */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A90000000000000000000002 /* Build configuration list for PBXNativeTarget "ChatGPTWeb" */;
+			buildPhases = (
+				A60000000000000000000001 /* Sources */,
+				A30000000000000000000001 /* Frameworks */,
+				A70000000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ChatGPTWeb;
+			productName = ChatGPTWeb;
+			productReference = A20000000000000000000000 /* ChatGPTWeb.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A80000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A50000000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A90000000000000000000001 /* Build configuration list for PBXProject "ChatGPTWeb" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = zh_CN;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+				zh_CN,
+			);
+			mainGroup = A40000000000000000000000;
+			productRefGroup = A40000000000000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50000000000000000000001 /* ChatGPTWeb */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A70000000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000018 /* Vendor/acorn.js in Resources */,
+				B10000000000000000000017 /* legacy-module-loader.js in Resources */,
+				B10000000000000000000016 /* legacy-regexp.js in Resources */,
+				B10000000000000000000015 /* chatgpt.js in Resources */,
+				A1000000000000000000000A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A60000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000013 /* KeyboardAccessoryController.m in Sources */,
+				B10000000000000000000012 /* PerformanceLogger.swift in Sources */,
+				B10000000000000000000011 /* ConversationState.swift in Sources */,
+				B10000000000000000000010 /* ShellSettings.swift in Sources */,
+				A10000000000000000000001 /* AppDelegate.swift in Sources */,
+				A10000000000000000000002 /* SceneDelegate.swift in Sources */,
+				A10000000000000000000003 /* WebViewController.swift in Sources */,
+				A10000000000000000000004 /* WebViewFactory.swift in Sources */,
+				A10000000000000000000005 /* NavigationPolicy.swift in Sources */,
+				A10000000000000000000006 /* NavigationCoordinator.swift in Sources */,
+				A10000000000000000000007 /* AuthenticationCoordinator.swift in Sources */,
+				A10000000000000000000008 /* DownloadCoordinator.swift in Sources */,
+				A10000000000000000000009 /* WebErrorView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA0000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AA0000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ChatGPTWeb/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.safenet.chatgptwebview;
+				PRODUCT_NAME = ChatGPTWebView;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = "ChatGPTWeb/ChatGPTWeb-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ChatGPTWeb/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.safenet.chatgptwebview;
+				PRODUCT_NAME = ChatGPTWebView;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				SWIFT_OBJC_BRIDGING_HEADER = "ChatGPTWeb/ChatGPTWeb-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A90000000000000000000001 /* Build configuration list for PBXProject "ChatGPTWeb" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000001 /* Debug */,
+				AA0000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A90000000000000000000002 /* Build configuration list for PBXNativeTarget "ChatGPTWeb" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000003 /* Debug */,
+				AA0000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A80000000000000000000001 /* Project object */;
+}
