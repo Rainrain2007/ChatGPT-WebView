@@ -61,11 +61,22 @@
     html[data-shell-lite] .animate-pulse, html[data-shell-lite] .animate-bounce {animation:none!important}
   `;
   (document.head || document.documentElement).appendChild(style);
+  let styleDefaultsTimer = 0;
+  const scheduleStyleDefaults = enabled => {
+    clearTimeout(styleDefaultsTimer);
+    if (!enabled) { window.__shellStyleDefaults?.set(false); return; }
+    // Let initial stylesheet loading settle before the version-gated change.
+    styleDefaultsTimer = setTimeout(() => window.__shellStyleDefaults?.set(true), 2500);
+  };
   window.__setShellLite = enabled => {
     document.documentElement.toggleAttribute('data-shell-lite', !!enabled);
     window.__chatgptSidebarMotionAB?.set(enabled ? true : null);
+    scheduleStyleDefaults(!!enabled);
   };
   window.__setShellLite(options.lite);
+  if (document.readyState !== 'complete') {
+    window.addEventListener('load', () => scheduleStyleDefaults(document.documentElement.hasAttribute('data-shell-lite')), {once: true});
+  }
 
   // Keep native touch/trackpad scrolling and defer sortable row presses until
   // a stationary hold is confirmed by a real pointer move.
@@ -82,12 +93,36 @@
     nav[role="navigation"] .sidebar-item a[href],
     nav[role="navigation"] a[href^="/c/"],
     nav[role="navigation"] a[href^="/g/"] {-webkit-user-drag:none!important}
+    :where(nav[role="navigation"] [role="listitem"],
+      nav[role="navigation"] [role="listitem"] *,
+      nav[role="navigation"] [aria-roledescription="sortable"],
+      nav[role="navigation"] [aria-roledescription="sortable"] *,
+      nav[role="navigation"] .sidebar-item,
+      nav[role="navigation"] .sidebar-item *,
+      nav[role="navigation"] a[href^="/c/"],
+      nav[role="navigation"] a[href^="/c/"] *,
+      nav[role="navigation"] a[href^="/g/"],
+      nav[role="navigation"] a[href^="/g/"] *) {
+      -webkit-user-select:none!important;user-select:none!important;-webkit-user-drag:none!important
+    }
+    nav[role="navigation"] input,
+    nav[role="navigation"] textarea,
+    nav[role="navigation"] [contenteditable="true"],
+    nav[role="navigation"] [contenteditable="true"] *,
+    nav[role="navigation"] [role="textbox"],
+    nav[role="navigation"] [role="textbox"] * {
+      -webkit-user-select:text!important;user-select:text!important
+    }
   `;
   (document.head || document.documentElement).appendChild(sidebarStyle);
   if (!CSS.supports('color', 'color-mix(in srgb, red 5%, transparent)')) {
     const searchTabStyle = document.createElement('style');
     searchTabStyle.id = 'chatgpt-search-tab-legacy';
-    searchTabStyle.textContent = `[role="dialog"] [role="tablist"] [role="tab"][aria-selected="true"].bg-text\\/5 {background-color:rgba(127,127,127,.16)!important}`;
+    searchTabStyle.textContent = `
+      [role="dialog"] [role="tablist"] [role="tab"][aria-selected="true"].bg-text\\/5,
+      button.bg-text\\/5 {background-color:rgba(127,127,127,.16)!important}
+      button.bg-text\\/5:hover {background-color:rgba(127,127,127,.24)!important}
+    `;
     (document.head || document.documentElement).appendChild(searchTabStyle);
   }
   if (typeof CSS.registerProperty !== 'function') {
@@ -102,6 +137,10 @@
   }
   const sidebarRow = '[role="listitem"], [aria-roledescription="sortable"], .sidebar-item, nav[role="navigation"] a[href^="/c/"], nav[role="navigation"] a[href^="/g/"]';
   const sidebarControl = 'button, input, textarea, select, summary, [role="button"], [contenteditable="true"]';
+  const nestedSidebarControl = (target, row) => {
+    const control = target?.closest(sidebarControl);
+    return control && control !== row && row.contains(control) ? control : null;
+  };
   const scrollableSidebarAncestor = (row, nav) => {
     for (let node = row.parentElement; node && node !== document.documentElement; node = node.parentElement) {
       if (!nav.contains(node) && node.clientWidth > nav.clientWidth * 1.5) break;
@@ -125,7 +164,7 @@
     const nav = event.target.closest('nav[role="navigation"]');
     const row = event.target.closest(sidebarRow);
     if (!nav || !row || !nav.contains(row)) return;
-    if (event.target.closest(sidebarControl)) return;
+    if (nestedSidebarControl(event.target, row)) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
 
     // Hold the original down event from the site's sortable handlers without
@@ -141,7 +180,9 @@
       isPrimary: event.isPrimary,
       target: event.target,
       row,
-      scroller: event.pointerType === 'mouse' ? scrollableSidebarAncestor(row, nav) : null,
+      nav,
+      scroller: null,
+      holdEligible: true,
       startX: event.clientX,
       startY: event.clientY,
       lastY: event.clientY,
@@ -177,9 +218,11 @@
         gesture.mode === 'heldLong' || gesture.mode === 'nativePan') return;
     const deltaFromStartY = event.clientY - gesture.startY;
     const deltaFromStartX = event.clientX - gesture.startX;
-    if (gesture.mode === 'pending' && Math.hypot(deltaFromStartX, deltaFromStartY) > 8) {
-      const elapsed = event.timeStamp - gesture.downTime;
-      if (elapsed >= 1800 && gesture.target.isConnected && typeof PointerEvent === 'function') {
+    const distance = Math.hypot(deltaFromStartX, deltaFromStartY);
+    const elapsed = event.timeStamp - gesture.downTime;
+    if (gesture.mode === 'pending' && elapsed < 1800 && distance > 3) gesture.holdEligible = false;
+    if (gesture.mode === 'pending' && distance > 8) {
+      if (gesture.holdEligible && elapsed >= 1800 && gesture.target.isConnected && typeof PointerEvent === 'function') {
         gesture.mode = 'heldLong';
         const replayed = new PointerEvent('pointerdown', {
           bubbles: true,
@@ -212,6 +255,7 @@
         return;
       }
       gesture.mode = gesture.pointerType === 'mouse' ? 'moved' : 'nativePan';
+      if (gesture.mode === 'moved') gesture.scroller = scrollableSidebarAncestor(gesture.row, gesture.nav);
     }
     if (gesture.mode === 'nativePan') return;
     if (gesture.mode === 'moved' && gesture.scroller && Math.abs(deltaFromStartY) > 8 &&
@@ -252,7 +296,7 @@
     const row = target?.closest(sidebarRow);
     if (row !== pending.row) return;
     // A menu/control click after the drag must still be delivered.
-    if (target?.closest(sidebarControl) || event.detail === 0) {
+    if (nestedSidebarControl(target, row) || event.detail === 0) {
       suppressedSidebarClick = null;
       return;
     }
@@ -276,14 +320,17 @@
     if(button.type==='submit' && button.closest('form')?.querySelector('[data-composer-body], #prompt-textarea'))return 'send';
     return null;
   };
-  const visible = element => element.getBoundingClientRect().width>0 && element.getBoundingClientRect().height>0;
+  const visible = element => {
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
   let blockedUntil=0;
   document.addEventListener('keydown',event=>{
     const editor=composer(event.target);
     if(event.key!=='Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey ||
       event.isComposing || event.keyCode===229 || !editor)return;
     const scope=editor.closest('form') || editor.closest('[data-composer-body]');
-    const buttons=[...scope.querySelectorAll('button')].filter(visible);
+    const buttons=[...scope.querySelectorAll('button')].filter(button => buttonKind(button) && visible(button));
     const stop=buttons.find(button=>buttonKind(button)==='stop');
     const send=buttons.find(button=>buttonKind(button)==='send' && !button.disabled && button.getAttribute('aria-disabled')!=='true');
     if(!stop && !send)return;
@@ -292,8 +339,9 @@
     blockedUntil=Date.now()+1000;send.click();
   },true);
   document.addEventListener('click',event=>{
-    const button=event.target.closest?.('button');if(!button || !visible(button))return;
+    const button=event.target.closest?.('button');if(!button)return;
     const kind=buttonKind(button);
+    if(!kind || !visible(button))return;
     if((kind==='send' || kind==='stop') && event.isTrusted && Date.now()<blockedUntil) {
       event.preventDefault();event.stopImmediatePropagation();return;
     }
@@ -323,8 +371,8 @@
   };
   document.addEventListener('scroll', event => {
     const target = event.target instanceof Element ? event.target : document.scrollingElement;
-    const main = document.querySelector('main');
-    if (target !== document.scrollingElement && (!main || (!main.contains(target) && !target.contains(main)))) return;
+    if (target !== document.scrollingElement &&
+        (!target || (!target.closest?.('main') && !target.querySelector?.('main')))) return;
     if (target && target.closest && target.closest('[role="dialog"], #prompt-textarea')) return;
     scroller = target;
     clearTimeout(timer); timer = setTimeout(saveScroll, 350);

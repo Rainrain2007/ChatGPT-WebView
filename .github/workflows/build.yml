@@ -24,6 +24,9 @@ jobs:
         run: |
           node tests/legacy-regexp.test.cjs
           node tests/legacy-module-loader.test.cjs
+          node tests/sidebar-gesture.test.cjs
+          node tests/shell-interactions.test.cjs
+          node tests/legacy-style-defaults.test.cjs
 
       - name: 构建无签名 IPA
         run: bash scripts/build-unsigned-ipa.sh

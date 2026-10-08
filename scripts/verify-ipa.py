@@ -14,7 +14,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     assert not info.get("UIRequiresFullScreen", False)
     assert info["CFBundleExecutable"] == "ChatGPTWebView"
     assert not any("/_CodeSignature/" in name for name in archive.namelist())
-    for resource in ["chatgpt.js", "legacy-regexp.js", "legacy-module-loader.js", "acorn.js"]:
+    for resource in ["chatgpt.js", "legacy-regexp.js", "legacy-module-loader.js", "acorn.js", "reduced-motion.js", "legacy-style-defaults.js"]:
         assert prefix + resource in archive.namelist(), "Missing resource: " + resource
     print("IPA verified:", info["CFBundleIdentifier"], info["CFBundleShortVersionString"],
           "build", info["CFBundleVersion"], "iOS", info["MinimumOSVersion"])

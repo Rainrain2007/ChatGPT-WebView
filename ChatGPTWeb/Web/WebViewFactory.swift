@@ -21,9 +21,11 @@ enum WebViewFactory {
         }
         if let url = Bundle.main.url(forResource: "chatgpt", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
+            let defaults = Bundle.main.url(forResource: "legacy-style-defaults", withExtension: "js")
+                .flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
             let options = "window.__webShellOptions = {lite: \(ShellSettings.liteMode), debug: \(ShellSettings.performanceLogging)};\n"
             configuration.userContentController.addUserScript(WKUserScript(
-                source: "if(window===window.top && location.protocol==='https:' && location.hostname==='chatgpt.com'){" + options + source + "}",
+                source: "if(window===window.top && location.protocol==='https:' && location.hostname==='chatgpt.com'){" + options + defaults + "\n" + source + "}",
                 injectionTime: .atDocumentEnd,
                 forMainFrameOnly: true
             ))
