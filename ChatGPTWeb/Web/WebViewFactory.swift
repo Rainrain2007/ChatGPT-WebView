@@ -10,6 +10,16 @@ enum WebViewFactory {
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         configuration.preferences.isFraudulentWebsiteWarningEnabled = true
+        if #unavailable(iOS 16.4),
+           let url = Bundle.main.url(forResource: "legacy-layer-order", withExtension: "js"),
+           let source = try? String(contentsOf: url, encoding: .utf8) {
+            let options = "window.__webShellLegacyLayerOrder = \(ShellSettings.liteMode);\n"
+            configuration.userContentController.addUserScript(WKUserScript(
+                source: "if(window===window.top && location.protocol==='https:' && location.hostname==='chatgpt.com'){" + options + source + "}",
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            ))
+        }
         if let url = Bundle.main.url(forResource: "reduced-motion", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             let options = "window.__webShellReduceMotion = \(ShellSettings.liteMode);\n"

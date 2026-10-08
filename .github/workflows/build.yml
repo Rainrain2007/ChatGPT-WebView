@@ -27,6 +27,7 @@ jobs:
           node tests/sidebar-gesture.test.cjs
           node tests/shell-interactions.test.cjs
           node tests/legacy-style-defaults.test.cjs
+          node tests/legacy-layer-order.test.cjs
 
       - name: 构建无签名 IPA
         run: bash scripts/build-unsigned-ipa.sh
