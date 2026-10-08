@@ -21,4 +21,13 @@ for(const input of ['','a','a\n','a\nb\n','\n\n']){assert.deepEqual([...input.sp
 for(const input of ['=true','x=true','true'])for(let index=0;index<=input.length;index++){let actual=legacy('(?<==)(?:true|false)','y'),expected=/(?<==)(?:true|false)/y;actual.lastIndex=expected.lastIndex=index;assert.deepEqual(actual.exec(input)?.[0],expected.exec(input)?.[0]);assert.equal(actual.lastIndex,expected.lastIndex);comparisons++;}
 assert.equal(legacy('(?<==)(?:true|false)').source,'(?<==)(?:true|false)');
 assert.throws(()=>legacy('(?<=unknown)a'),e=>e.name==='SyntaxError');
+for (const prefix of ['😀','中','a',' ', 'a\u0301','\uD800','\uDC00','x'.repeat(100000)+'😀']) {
+  for (const [pattern,suffix] of [
+    ['(?<=^|\\s|\\p{P}|\\p{S})x@y.com','x@y.com'],
+    ['(?<![\\p{L}\\p{N}_$\\\\])\\$sites','$sites']
+  ]) {
+    const input=prefix+suffix;
+    assert.deepEqual(matches(legacy(pattern,'gu'),input),matches(new RegExp(pattern,'gu'),input));comparisons++;
+  }
+}
 console.log(comparisons+' native/legacy match, split and sticky comparisons passed');

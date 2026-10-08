@@ -23,10 +23,16 @@
   window.__setShellLite = enabled => document.documentElement.toggleAttribute('data-shell-lite', !!enabled);
   window.__setShellLite(options.lite);
 
-  // Touch gestures in the history list scroll; mouse dragging remains available.
+  // Keep native touch/trackpad scrolling while preventing sortable rows from
+  // interpreting pointer presses as reorder gestures.
   const sidebarStyle = document.createElement('style');
   sidebarStyle.id = 'chatgpt-shell-sidebar-touch';
-  sidebarStyle.textContent = 'nav[role="navigation"] [role="listitem"], nav[role="navigation"] [aria-roledescription="sortable"] {touch-action:pan-y!important}';
+  sidebarStyle.textContent = `
+    nav[role="navigation"] [role="listitem"],
+    nav[role="navigation"] [aria-roledescription="sortable"] {touch-action:manipulation!important}
+    nav[role="navigation"] [role="listitem"] a[href],
+    nav[role="navigation"] [aria-roledescription="sortable"] a[href] {-webkit-user-drag:none!important}
+  `;
   (document.head || document.documentElement).appendChild(sidebarStyle);
   if (typeof CSS.registerProperty !== 'function') {
     const layoutStyle = document.createElement('style');
@@ -38,14 +44,172 @@
     `;
     (document.head || document.documentElement).appendChild(layoutStyle);
   }
+  const sidebarRow = '[role="listitem"], [aria-roledescription="sortable"]';
+  const sidebarControl = 'button, input, textarea, select, summary, [role="button"], [contenteditable="true"]';
+  const scrollableSidebarAncestor = (row, nav) => {
+    for (let node = row.parentElement; node && nav.contains(node); node = node.parentElement) {
+      const overflowY = getComputedStyle(node).overflowY;
+      if ((overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+          node.clientHeight > 0 && node.scrollHeight > node.clientHeight) return node;
+    }
+    return null;
+  };
+  let sidebarGesture = null;
+  const replayedSidebarPointerDowns = new WeakSet();
+  let suppressedSidebarClick = null;
+  const clearSidebarGesture = () => {
+    if (sidebarGesture?.timer) clearTimeout(sidebarGesture.timer);
+    sidebarGesture = null;
+  };
   document.addEventListener('pointerdown', event => {
-    if (event.pointerType !== 'touch' || !(event.target instanceof Element)) return;
+    if (replayedSidebarPointerDowns.has(event)) return;
+    // The browser emits the drag's click directly after pointerup. Any later
+    // pointerdown starts a new user action and must not inherit that guard.
+    suppressedSidebarClick = null;
+    if (sidebarGesture && sidebarGesture.pointerId !== event.pointerId) clearSidebarGesture();
+    if (!(event.target instanceof Element)) return;
     const nav = event.target.closest('nav[role="navigation"]');
-    if (!nav) return;
-    const row = event.target.closest('[role="listitem"], [aria-roledescription="sortable"]');
-    if (!row || !nav.contains(row)) return;
-    // Do not preventDefault: WebKit must retain native scrolling and tap/click.
+    const row = event.target.closest(sidebarRow);
+    if (!nav || !row || !nav.contains(row)) return;
+    if (event.target.closest(sidebarControl)) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    // Hold the original down event from the site's sortable handlers without
+    // canceling browser defaults such as touch panning.
     event.stopPropagation();
+    if (!event.isPrimary) {
+      clearSidebarGesture();
+      return;
+    }
+    const gesture = {
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      isPrimary: event.isPrimary,
+      target: event.target,
+      row,
+      scroller: event.pointerType === 'mouse' ? scrollableSidebarAncestor(row, nav) : null,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastY: event.clientY,
+      button: event.button,
+      buttons: event.buttons,
+      pressure: event.pressure,
+      width: event.width,
+      height: event.height,
+      tangentialPressure: event.tangentialPressure,
+      tiltX: event.tiltX,
+      tiltY: event.tiltY,
+      twist: event.twist,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      mode: 'pending',
+      timer: null
+    };
+    sidebarGesture = gesture;
+    gesture.timer = setTimeout(() => {
+      if (sidebarGesture !== gesture || !gesture.target.isConnected) {
+        clearSidebarGesture();
+        return;
+      }
+      gesture.timer = null;
+      gesture.mode = 'heldLong';
+      const replayed = new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: window,
+        pointerId: gesture.pointerId,
+        pointerType: gesture.pointerType,
+        isPrimary: gesture.isPrimary,
+        clientX: gesture.startX,
+        clientY: gesture.startY,
+        screenX: gesture.screenX,
+        screenY: gesture.screenY,
+        button: gesture.button,
+        buttons: gesture.buttons,
+        pressure: gesture.pressure,
+        width: gesture.width,
+        height: gesture.height,
+        tangentialPressure: gesture.tangentialPressure,
+        tiltX: gesture.tiltX,
+        tiltY: gesture.tiltY,
+        twist: gesture.twist,
+        altKey: gesture.altKey,
+        ctrlKey: gesture.ctrlKey,
+        metaKey: gesture.metaKey,
+        shiftKey: gesture.shiftKey
+      });
+      replayedSidebarPointerDowns.add(replayed);
+      gesture.target.dispatchEvent(replayed);
+    }, 1800);
+  }, true);
+  document.addEventListener('dragstart', event => {
+    if (!(event.target instanceof Element)) return;
+    const nav = event.target.closest('nav[role="navigation"]');
+    const row = event.target.closest(sidebarRow);
+    if (nav && row && nav.contains(row)) event.preventDefault();
+  }, true);
+  document.addEventListener('pointermove', event => {
+    const gesture = sidebarGesture;
+    if (!gesture || event.pointerId !== gesture.pointerId ||
+        gesture.mode === 'heldLong' || gesture.mode === 'nativePan') return;
+    const deltaFromStartY = event.clientY - gesture.startY;
+    const deltaFromStartX = event.clientX - gesture.startX;
+    if (gesture.mode === 'pending' && Math.hypot(deltaFromStartX, deltaFromStartY) > 8) {
+      if (gesture.timer) clearTimeout(gesture.timer);
+      gesture.timer = null;
+      gesture.mode = gesture.pointerType === 'mouse' ? 'moved' : 'nativePan';
+    }
+    if (gesture.mode === 'nativePan') return;
+    if (gesture.mode === 'moved' && gesture.scroller && Math.abs(deltaFromStartY) > 8 &&
+        Math.abs(deltaFromStartY) >= Math.abs(deltaFromStartX)) gesture.mode = 'scrolling';
+    if (gesture.mode !== 'scrolling') return;
+    event.preventDefault();
+    event.stopPropagation();
+    gesture.scroller.scrollTop += gesture.lastY - event.clientY;
+    gesture.lastY = event.clientY;
+  }, {capture: true, passive: false});
+  document.addEventListener('pointerup', event => {
+    const gesture = sidebarGesture;
+    if (!gesture || event.pointerId !== gesture.pointerId) return;
+    if (gesture.mode === 'scrolling' || gesture.mode === 'heldLong') {
+      suppressedSidebarClick = {row: gesture.row, pointerId: gesture.pointerId, expiresAt: performance.now() + 350};
+    }
+    clearSidebarGesture();
+  }, true);
+  document.addEventListener('pointercancel', event => {
+    if (sidebarGesture && event.pointerId === sidebarGesture.pointerId) clearSidebarGesture();
+  }, true);
+  window.addEventListener('blur', clearSidebarGesture);
+  document.addEventListener('contextmenu', event => {
+    if (!(event.target instanceof Element)) return;
+    const gesture = sidebarGesture;
+    if (gesture?.pointerType === 'touch' && gesture.mode === 'pending' &&
+        gesture.row.contains(event.target)) event.preventDefault();
+  }, true);
+  document.addEventListener('click', event => {
+    const pending = suppressedSidebarClick;
+    if (!pending) return;
+    if (performance.now() > pending.expiresAt) {
+      suppressedSidebarClick = null;
+      return;
+    }
+    const target = event.target instanceof Element ? event.target : null;
+    const row = target?.closest(sidebarRow);
+    if (row !== pending.row) return;
+    // A menu/control click after the drag must still be delivered.
+    if (target?.closest(sidebarControl) || event.detail === 0) {
+      suppressedSidebarClick = null;
+      return;
+    }
+    if (typeof event.pointerId === 'number' && event.pointerId !== pending.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressedSidebarClick = null;
   }, true);
 
   const composer = element => {

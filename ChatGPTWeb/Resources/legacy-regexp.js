@@ -4,6 +4,16 @@
   const nativeExec = NativeRegExp.prototype.exec;
   const boundary = new NativeRegExp('[\\s\\p{P}\\p{S}]$', 'u');
   const identifier = new NativeRegExp('[\\p{L}\\p{N}_$\\\\]$', 'u');
+  // Examine one Unicode code point instead of copying the full input prefix.
+  const previousCodePoint = (input, position) => {
+    let start = position - 1;
+    const last = input.charCodeAt(start);
+    if (start > 0 && last >= 0xDC00 && last <= 0xDFFF) {
+      const first = input.charCodeAt(start - 1);
+      if (first >= 0xD800 && first <= 0xDBFF) start--;
+    }
+    return input.slice(Math.max(0, start), position);
+  };
   function compile(pattern, flags) {
     const original = pattern instanceof NativeRegExp ? pattern.source : String(pattern === undefined ? '' : pattern);
     flags = flags === undefined && pattern instanceof NativeRegExp ? pattern.flags : String(flags === undefined ? '' : flags);
@@ -12,8 +22,8 @@
       ['(?<=\\n)', (s,p) => p>0 && s[p-1]==='\n'],
       ['(?<==)', (s,p) => p>0 && s[p-1]==='='],
       ['(?<!`)', (s,p) => p===0 || s[p-1]!=='`'],
-      ['(?<=^|\\s|\\p{P}|\\p{S})', (s,p) => p===0 || boundary.test(s.slice(0,p))],
-      ['(?<![\\p{L}\\p{N}_$\\\\])', (s,p) => p===0 || !identifier.test(s.slice(0,p))]
+      ['(?<=^|\\s|\\p{P}|\\p{S})', (s,p) => p===0 || boundary.test(previousCodePoint(s,p))],
+      ['(?<![\\p{L}\\p{N}_$\\\\])', (s,p) => p===0 || !identifier.test(previousCodePoint(s,p))]
     ];
     const markers=[], captures=[], backrefs=[];
     let source='', inClass=false, actualCapture=0, originalCapture=0;
@@ -52,10 +62,16 @@
       hasIndices: {value: flags.includes('d'), configurable: true},
       constructor: {value: LegacyRegExp, configurable: true},
       exec: {configurable: true, value: function(value) {
+        const profile = window.__legacyRegExpProfileEnabled ?
+          (window.__legacyRegExpProfile ||= {calls:0, candidates:0, rejected:0, chars:0, elapsedMs:0}) : null;
+        const started = profile ? performance.now() : 0;
         const input = String(value), initial = this.lastIndex;
+        if (profile) {profile.calls++; profile.chars += input.length;}
+        try {
         search.lastIndex = this.global || this.sticky ? initial : 0;
         let match;
         while ((match = nativeExec.call(search, input))) {
+          if (profile) profile.candidates++;
           if (markers.every(marker=>{
             const position=match.indices.groups[marker.name];
             return position===undefined || marker.test(input,position[0]);
@@ -70,6 +86,7 @@
             if(flags.includes('d')){indices.groups=Object.keys(indexGroups).length?indexGroups:undefined;values.indices=indices;}
             return values;
           }
+          if (profile) profile.rejected++;
           if (this.sticky) break;
           let next = match.index+1;
           if (this.unicode && /[\uD800-\uDBFF]/.test(input[match.index]) && /[\uDC00-\uDFFF]/.test(input[next])) next++;
@@ -77,6 +94,7 @@
         }
         if (this.global || this.sticky) this.lastIndex = 0;
         return null;
+        } finally {if (profile) profile.elapsedMs += performance.now() - started;}
       }}
     });
     return regex;

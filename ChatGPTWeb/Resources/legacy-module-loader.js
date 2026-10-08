@@ -1,7 +1,7 @@
 (() => {
   if (location.hostname !== 'chatgpt.com' || window !== window.top) return;
   const modules = new Map(), urls = [], seenScripts = new WeakSet();
-  const stats = window.__legacyWebKit = {loaded:0, patched:0, booted:0, errors:[], fetches:0, fastPaths:0, planHits:0, analysed:0, analyseMs:0};
+  const stats = window.__legacyWebKit = {loaded:0, patched:0, booted:0, errors:[], fetches:0, fastPaths:0, planHits:0, analysed:0, analyseMs:0, runtimeImports:0, importMs:0};
   const allowed = u => u.origin === location.origin && /^\/cdn\/assets\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9._-]+\.js$/.test(u.pathname);
   // Only analysis recipes for immutable public assets are persisted. Blob URLs
   // are recreated per document; account and conversation responses are untouched.
@@ -117,7 +117,11 @@
   }
   window.__compatImport = async (specifier,base) => {
     const u=new URL(specifier,base);
-    return import(allowed(u)?await load(u.href):u.href);
+    const measure=!!window.__legacyModuleProfileEnabled;
+    const started=measure?performance.now():0;
+    if(measure)stats.runtimeImports++;
+    try {return await import(allowed(u)?await load(u.href):u.href);}
+    finally {if(measure)stats.importMs+=performance.now()-started;}
   };
   async function boot(original) {
     if(seenScripts.has(original) || original.type!=='module' || original.src || !original.textContent.includes('/cdn/assets/'))return;
