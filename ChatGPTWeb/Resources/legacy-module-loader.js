@@ -1,13 +1,60 @@
 (() => {
   if (location.hostname !== 'chatgpt.com' || window !== window.top) return;
   const modules = new Map(), urls = [], seenScripts = new WeakSet();
-  const stats = window.__legacyWebKit = {loaded:0, patched:0, booted:0, errors:[], fetches:0};
+  const stats = window.__legacyWebKit = {loaded:0, patched:0, booted:0, errors:[], fetches:0, fastPaths:0, planHits:0, analysed:0, analyseMs:0};
   const allowed = u => u.origin === location.origin && /^\/cdn\/assets\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9._-]+\.js$/.test(u.pathname);
+  // Only analysis recipes for immutable public assets are persisted. Blob URLs
+  // are recreated per document; account and conversation responses are untouched.
+  const recipeDB = new Promise(resolve => {
+    let done = false;
+    const finish = value => { if (!done) {done=true;resolve(value);} };
+    setTimeout(() => finish(null), 250);
+    try {
+      const request=indexedDB.open('ChatGPTWeb.LegacyModulePlans',1);
+      request.onupgradeneeded=()=>request.result.createObjectStore('plans',{keyPath:'url'});
+      request.onsuccess=()=>{if(done)request.result.close();else finish(request.result);};
+      request.onerror=request.onblocked=()=>finish(null);
+    } catch (_) {finish(null);}
+  });
+  const cacheable = base => /\.[0-9a-f]{6,}\.js$/i.test(new URL(base).pathname);
+  const fingerprint = async source => {
+    try {
+      const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(source));
+      return Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('');
+    } catch(_){return null;}
+  };
+  const readPlan = async (base, length, digest) => {
+    if(!cacheable(base) || !digest)return null;
+    const db=await recipeDB;if(!db)return null;
+    return new Promise(resolve=>{
+      let settled=false;
+      const finish=value=>{if(!settled){settled=true;resolve(value);}};
+      setTimeout(()=>finish(null),100);
+      try {
+        const request=db.transaction('plans').objectStore('plans').get(base);
+        request.onsuccess=()=>{
+          const item=request.result;
+          finish(item?.compiler===1 && item.length===length && item.digest===digest ? item.plan : null);
+        };
+        request.onerror=()=>finish(null);
+      } catch(_){finish(null);}
+    });
+  };
+  const savePlan = async (base, length, digest, plan) => {
+    if(!cacheable(base) || !digest)return;
+    try {
+      const db=await recipeDB;if(!db)return;
+      const store=db.transaction('plans','readwrite').objectStore('plans');
+      store.put({url:base,length,digest,compiler:1,plan});
+      const count=store.count();
+      count.onsuccess=()=>{if(count.result>192){let remaining=count.result-192;const cursor=store.openCursor();cursor.onsuccess=()=>{const item=cursor.result;if(item&&remaining-->0){item.delete();item.continue();}};}};
+    } catch(_) {}
+  };
   const editsApply = (s, edits) => { edits.sort((a,b)=>b.start-a.start); for(const e of edits) s=s.slice(0,e.start)+e.text+s.slice(e.end); return s; };
-  async function transform(source, base) {
+  function analyse(source, base) {
     const ast = acorn.parse(source,{ecmaVersion:'latest',sourceType:'module'});
     const edits=[], imports=[];
-    let serial=0;
+    let serial=0, patched=0;
     const visit = n => {
       if (!n || typeof n !== 'object') return;
       if (n.type === 'ImportDeclaration' || ((n.type === 'ExportNamedDeclaration' || n.type === 'ExportAllDeclaration') && n.source)) {
@@ -15,7 +62,7 @@
         if (u.href===base && n.type==='ImportDeclaration' && n.specifiers.length===1 && n.specifiers[0].type==='ImportNamespaceSpecifier') {
           edits.push({start:n.start,end:n.end,text:'const '+n.specifiers[0].local.name+'={__rspack_esm_id,__rspack_esm_ids,__webpack_modules__};'});
         } else if(allowed(u)) {
-          imports.push(load(u.href).then(blob=>edits.push({start:n.source.start,end:n.source.end,text:JSON.stringify(blob)})));
+          imports.push({url:u.href,start:n.source.start,end:n.source.end});
         }
       }
       if(n.type==='MemberExpression' && n.object.type==='MetaProperty' && n.object.meta.name==='import' && n.property.name==='url') edits.push({start:n.start,end:n.end,text:JSON.stringify(base)});
@@ -26,17 +73,35 @@
       if(n.type==='StaticBlock') {
         edits.push({start:n.start,end:n.start+6,text:'static #__compatBlock'+(serial++)+'=(()=>'});
         edits.push({start:n.end,end:n.end,text:')();'});
-        stats.patched++;
+        patched++;
       }
       if(n.type==='Literal' && n.regex && /\(\?<([=!])/.test(n.regex.pattern)) {
-        edits.push({start:n.start,end:n.end,text:'window.__legacyRegExp('+JSON.stringify(n.regex.pattern)+','+JSON.stringify(n.regex.flags)+')'});stats.patched++;
+        edits.push({start:n.start,end:n.end,text:'window.__legacyRegExp('+JSON.stringify(n.regex.pattern)+','+JSON.stringify(n.regex.flags)+')'});patched++;
       }
       for(const k of Object.keys(n)) {
         if(k==='regex' || k==='start' || k==='end')continue;
         const v=n[k];if(Array.isArray(v))v.forEach(visit);else if(v && typeof v==='object')visit(v);
       }
     };
-    visit(ast); await Promise.all(imports);
+    visit(ast);
+    return {edits,imports,patched};
+  }
+  async function transform(source, base) {
+    if(!/\bimport\b|\bstatic\b|\(\?<([=!])|\bexport\s*(?:\/|\*|\{)/.test(source)) {
+      stats.fastPaths++;
+      return source+'\n//# sourceURL='+base;
+    }
+    const digest=cacheable(base)?await fingerprint(source):null;
+    let plan=await readPlan(base,source.length,digest);
+    if(plan){stats.planHits++;}
+    else {
+      const start=performance.now();plan=analyse(source,base);
+      stats.analysed++;stats.analyseMs+=performance.now()-start;
+      savePlan(base,source.length,digest,plan);
+    }
+    stats.patched+=plan.patched;
+    const edits=plan.edits.map(edit=>({...edit}));
+    await Promise.all(plan.imports.map(item=>load(item.url).then(blob=>edits.push({start:item.start,end:item.end,text:JSON.stringify(blob)}))));
     return editsApply(source,edits)+'\n//# sourceURL='+base;
   }
   function load(href) {

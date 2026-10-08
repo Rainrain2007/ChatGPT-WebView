@@ -40,7 +40,9 @@ final class NavigationCoordinator: NSObject {
 
     func retryAfterFailure() {
         errorView?.isHidden = true
-        if let failedRequest {
+        ShellSettings.invalidateStartupCache()
+        if var failedRequest {
+            failedRequest.cachePolicy = .useProtocolCachePolicy
             webView?.load(failedRequest)
         } else if let url = webView?.url {
             webView?.load(URLRequest(url: url))
@@ -191,6 +193,7 @@ extension NavigationCoordinator: WKNavigationDelegate {
         failedRequest = nil
         logger.record("finish", url: webView.url)
         if let url = webView.url { ConversationState.save(url) }
+        if webView.url?.host == "chatgpt.com" { ShellSettings.noteSuccessfulWebLoad() }
         webView.evaluateJavaScript("if(location.hostname==='chatgpt.com'){window.__setShellLite?.(\(ShellSettings.liteMode));}", completionHandler: nil)
         errorView?.isHidden = true
     }

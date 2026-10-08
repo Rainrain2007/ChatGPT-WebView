@@ -38,6 +38,7 @@ enum WebViewFactory {
     static func makeWebView(configuration: WKWebViewConfiguration? = nil) -> WKWebView {
         let webView = WKWebView(frame: .zero, configuration: configuration ?? makeConfiguration())
         webView.allowsBackForwardNavigationGestures = true
+        webView.allowsLinkPreview = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.keyboardDismissMode = .interactive
         webView.scrollView.bounces = false

@@ -21,7 +21,9 @@ jobs:
         run: xcodebuild -version
 
       - name: 验证兼容逻辑
-        run: node tests/legacy-regexp.test.cjs
+        run: |
+          node tests/legacy-regexp.test.cjs
+          node tests/legacy-module-loader.test.cjs
 
       - name: 构建无签名 IPA
         run: bash scripts/build-unsigned-ipa.sh

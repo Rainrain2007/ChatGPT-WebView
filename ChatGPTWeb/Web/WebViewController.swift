@@ -20,6 +20,7 @@ final class WebViewController: UIViewController {
         configureView()
         webView.configuration.userContentController.add(state, name: "shellState")
         state.onCompatibilityFailure = { [weak self] in
+            ShellSettings.invalidateStartupCache()
             self?.errorView.show(title: "旧版 WebKit 兼容加载失败", message: "请检查网络后重试。当前网页可能使用了新的脚本语法。")
         }
         navigationCoordinator.start()
@@ -84,13 +85,16 @@ final class WebViewController: UIViewController {
             guard let self else { return }
             KeyboardAccessoryController.setHidden(ShellSettings.hideKeyboardAssistant, for: self.webView)
         })
+        menu.addAction(UIAlertAction(title: "启动优先使用近期缓存：" + (ShellSettings.cacheFirstStartup ? "开启" : "关闭"), style: .default) { _ in
+            ShellSettings.cacheFirstStartup.toggle()
+        })
         #if DEBUG
         menu.addAction(UIAlertAction(title: "Performance logging: " + (ShellSettings.performanceLogging ? "On" : "Off"), style: .default) { _ in
             UserDefaults.standard.set(!ShellSettings.performanceLogging, forKey: "PerformanceLogging")
         })
         menu.addAction(UIAlertAction(title: "Toggle startup cache policy (restart)", style: .default) { _ in
             let defaults = UserDefaults.standard
-            defaults.set(!defaults.bool(forKey: "DebugCacheFirstStartup"), forKey: "DebugCacheFirstStartup")
+            defaults.set(!defaults.bool(forKey: "DebugProtocolCacheStartup"), forKey: "DebugProtocolCacheStartup")
         })
         menu.addAction(UIAlertAction(title: "Debug User Agent (restart)", style: .default) { [weak self] _ in
             let prompt = UIAlertController(title: "Custom User Agent", message: "Leave blank to use the device default.", preferredStyle: .alert)
