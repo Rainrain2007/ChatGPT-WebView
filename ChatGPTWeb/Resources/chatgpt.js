@@ -30,8 +30,7 @@
   sidebarStyle.textContent = `
     nav[role="navigation"] [role="listitem"],
     nav[role="navigation"] [aria-roledescription="sortable"] {touch-action:manipulation!important}
-    nav[role="navigation"] [role="listitem"] a[href],
-    nav[role="navigation"] [aria-roledescription="sortable"] a[href] {-webkit-user-drag:none!important}
+    nav[role="navigation"] a[href] {-webkit-user-drag:none!important}
   `;
   (document.head || document.documentElement).appendChild(sidebarStyle);
   if (typeof CSS.registerProperty !== 'function') {
