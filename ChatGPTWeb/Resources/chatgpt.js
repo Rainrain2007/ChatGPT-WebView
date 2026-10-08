@@ -3,6 +3,47 @@
   if (window !== window.top || location.hostname !== 'chatgpt.com' || location.protocol !== 'https:' || window.__chatGPTShell) return;
   window.__chatGPTShell = true;
   const options = window.__webShellOptions || {};
+  // Lock the document scale. Image viewers may still transform their own media.
+  const lockViewport = () => {
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      (document.head || document.documentElement).appendChild(meta);
+    }
+    const content = 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+    if (meta.content !== content) meta.content = content;
+    return meta;
+  };
+  const viewport = lockViewport();
+  new MutationObserver(lockViewport).observe(viewport, {attributes: true, attributeFilter: ['content']});
+
+  // Keyboard focus follows an explicit editor press or Tab. Route changes and
+  // opening a dialog must not summon the keyboard on their own.
+  if (!window.__shellFocusControl) {
+    const nativeFocus = HTMLElement.prototype.focus;
+    const control = window.__shellFocusControl = {enabled: options.autoFocus === true, target: null, at: 0};
+    const editable = element => element?.closest?.('input, textarea, [contenteditable="true"]');
+    document.addEventListener('pointerdown', event => {
+      control.tab = false;
+      control.target = editable(event.target);
+      control.at = performance.now();
+    }, {capture: true, passive: true});
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Tab' || editable(event.target)) {
+        control.target = event.key === 'Tab' ? null : editable(event.target);
+        control.at = performance.now();
+        control.tab = event.key === 'Tab';
+      }
+    }, {capture: true, passive: true});
+    HTMLElement.prototype.focus = function (...args) {
+      const field = editable(this);
+      const manual = performance.now() - control.at < 1500 && (control.tab || control.target === field);
+      if (field && !control.enabled && !manual) return;
+      return Reflect.apply(nativeFocus, this, args);
+    };
+    window.__setShellAutoFocus = enabled => { control.enabled = !!enabled; };
+  }
   const post = (kind, extra = {}) => {
     try { window.webkit.messageHandlers.shellState.postMessage({kind, url: location.href, ...extra}); } catch (_) {}
   };
@@ -20,19 +61,35 @@
     html[data-shell-lite] .animate-pulse, html[data-shell-lite] .animate-bounce {animation:none!important}
   `;
   (document.head || document.documentElement).appendChild(style);
-  window.__setShellLite = enabled => document.documentElement.toggleAttribute('data-shell-lite', !!enabled);
+  window.__setShellLite = enabled => {
+    document.documentElement.toggleAttribute('data-shell-lite', !!enabled);
+    window.__chatgptSidebarMotionAB?.set(enabled ? true : null);
+  };
   window.__setShellLite(options.lite);
 
-  // Keep native touch/trackpad scrolling while preventing sortable rows from
-  // interpreting pointer presses as reorder gestures.
+  // Keep native touch/trackpad scrolling and defer sortable row presses until
+  // a stationary hold is confirmed by a real pointer move.
   const sidebarStyle = document.createElement('style');
   sidebarStyle.id = 'chatgpt-shell-sidebar-touch';
   sidebarStyle.textContent = `
     nav[role="navigation"] [role="listitem"],
-    nav[role="navigation"] [aria-roledescription="sortable"] {touch-action:manipulation!important}
-    nav[role="navigation"] a[href] {-webkit-user-drag:none!important}
+    nav[role="navigation"] [aria-roledescription="sortable"],
+    nav[role="navigation"] .sidebar-item,
+    nav[role="navigation"] a[href^="/c/"],
+    nav[role="navigation"] a[href^="/g/"] {touch-action:manipulation!important}
+    nav[role="navigation"] [role="listitem"] a[href],
+    nav[role="navigation"] [aria-roledescription="sortable"] a[href],
+    nav[role="navigation"] .sidebar-item a[href],
+    nav[role="navigation"] a[href^="/c/"],
+    nav[role="navigation"] a[href^="/g/"] {-webkit-user-drag:none!important}
   `;
   (document.head || document.documentElement).appendChild(sidebarStyle);
+  if (!CSS.supports('color', 'color-mix(in srgb, red 5%, transparent)')) {
+    const searchTabStyle = document.createElement('style');
+    searchTabStyle.id = 'chatgpt-search-tab-legacy';
+    searchTabStyle.textContent = `[role="dialog"] [role="tablist"] [role="tab"][aria-selected="true"].bg-text\\/5 {background-color:rgba(127,127,127,.16)!important}`;
+    (document.head || document.documentElement).appendChild(searchTabStyle);
+  }
   if (typeof CSS.registerProperty !== 'function') {
     const layoutStyle = document.createElement('style');
     layoutStyle.id = 'chatgpt-shell-legacy-layout';
@@ -43,10 +100,11 @@
     `;
     (document.head || document.documentElement).appendChild(layoutStyle);
   }
-  const sidebarRow = '[role="listitem"], [aria-roledescription="sortable"]';
+  const sidebarRow = '[role="listitem"], [aria-roledescription="sortable"], .sidebar-item, nav[role="navigation"] a[href^="/c/"], nav[role="navigation"] a[href^="/g/"]';
   const sidebarControl = 'button, input, textarea, select, summary, [role="button"], [contenteditable="true"]';
   const scrollableSidebarAncestor = (row, nav) => {
-    for (let node = row.parentElement; node && nav.contains(node); node = node.parentElement) {
+    for (let node = row.parentElement; node && node !== document.documentElement; node = node.parentElement) {
+      if (!nav.contains(node) && node.clientWidth > nav.clientWidth * 1.5) break;
       const overflowY = getComputedStyle(node).overflowY;
       if ((overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
           node.clientHeight > 0 && node.scrollHeight > node.clientHeight) return node;
@@ -56,10 +114,7 @@
   let sidebarGesture = null;
   const replayedSidebarPointerDowns = new WeakSet();
   let suppressedSidebarClick = null;
-  const clearSidebarGesture = () => {
-    if (sidebarGesture?.timer) clearTimeout(sidebarGesture.timer);
-    sidebarGesture = null;
-  };
+  const clearSidebarGesture = () => { sidebarGesture = null; };
   document.addEventListener('pointerdown', event => {
     if (replayedSidebarPointerDowns.has(event)) return;
     // The browser emits the drag's click directly after pointerup. Any later
@@ -105,46 +160,10 @@
       ctrlKey: event.ctrlKey,
       metaKey: event.metaKey,
       shiftKey: event.shiftKey,
+      downTime: event.timeStamp,
       mode: 'pending',
-      timer: null
     };
     sidebarGesture = gesture;
-    gesture.timer = setTimeout(() => {
-      if (sidebarGesture !== gesture || !gesture.target.isConnected) {
-        clearSidebarGesture();
-        return;
-      }
-      gesture.timer = null;
-      gesture.mode = 'heldLong';
-      const replayed = new PointerEvent('pointerdown', {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        view: window,
-        pointerId: gesture.pointerId,
-        pointerType: gesture.pointerType,
-        isPrimary: gesture.isPrimary,
-        clientX: gesture.startX,
-        clientY: gesture.startY,
-        screenX: gesture.screenX,
-        screenY: gesture.screenY,
-        button: gesture.button,
-        buttons: gesture.buttons,
-        pressure: gesture.pressure,
-        width: gesture.width,
-        height: gesture.height,
-        tangentialPressure: gesture.tangentialPressure,
-        tiltX: gesture.tiltX,
-        tiltY: gesture.tiltY,
-        twist: gesture.twist,
-        altKey: gesture.altKey,
-        ctrlKey: gesture.ctrlKey,
-        metaKey: gesture.metaKey,
-        shiftKey: gesture.shiftKey
-      });
-      replayedSidebarPointerDowns.add(replayed);
-      gesture.target.dispatchEvent(replayed);
-    }, 1800);
   }, true);
   document.addEventListener('dragstart', event => {
     if (!(event.target instanceof Element)) return;
@@ -159,8 +178,39 @@
     const deltaFromStartY = event.clientY - gesture.startY;
     const deltaFromStartX = event.clientX - gesture.startX;
     if (gesture.mode === 'pending' && Math.hypot(deltaFromStartX, deltaFromStartY) > 8) {
-      if (gesture.timer) clearTimeout(gesture.timer);
-      gesture.timer = null;
+      const elapsed = event.timeStamp - gesture.downTime;
+      if (elapsed >= 1800 && gesture.target.isConnected && typeof PointerEvent === 'function') {
+        gesture.mode = 'heldLong';
+        const replayed = new PointerEvent('pointerdown', {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          view: window,
+          pointerId: gesture.pointerId,
+          pointerType: gesture.pointerType,
+          isPrimary: gesture.isPrimary,
+          clientX: gesture.startX,
+          clientY: gesture.startY,
+          screenX: gesture.screenX,
+          screenY: gesture.screenY,
+          button: gesture.button,
+          buttons: gesture.buttons,
+          pressure: gesture.pressure,
+          width: gesture.width,
+          height: gesture.height,
+          tangentialPressure: gesture.tangentialPressure,
+          tiltX: gesture.tiltX,
+          tiltY: gesture.tiltY,
+          twist: gesture.twist,
+          altKey: gesture.altKey,
+          ctrlKey: gesture.ctrlKey,
+          metaKey: gesture.metaKey,
+          shiftKey: gesture.shiftKey
+        });
+        replayedSidebarPointerDowns.add(replayed);
+        gesture.target.dispatchEvent(replayed);
+        return;
+      }
       gesture.mode = gesture.pointerType === 'mouse' ? 'moved' : 'nativePan';
     }
     if (gesture.mode === 'nativePan') return;
@@ -175,7 +225,8 @@
   document.addEventListener('pointerup', event => {
     const gesture = sidebarGesture;
     if (!gesture || event.pointerId !== gesture.pointerId) return;
-    if (gesture.mode === 'scrolling' || gesture.mode === 'heldLong') {
+    if (gesture.mode === 'scrolling' || gesture.mode === 'heldLong' ||
+        (gesture.mode === 'pending' && event.timeStamp - gesture.downTime >= 1800)) {
       suppressedSidebarClick = {row: gesture.row, pointerId: gesture.pointerId, expiresAt: performance.now() + 350};
     }
     clearSidebarGesture();

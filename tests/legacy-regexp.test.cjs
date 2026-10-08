@@ -30,4 +30,26 @@ for (const prefix of ['😀','中','a',' ', 'a\u0301','\uD800','\uDC00','x'.repe
     assert.deepEqual(matches(legacy(pattern,'gu'),input),matches(new RegExp(pattern,'gu'),input));comparisons++;
   }
 }
+const mooAttributePattern="(?:(?:((?:(?:[ \\t\\v\\f\\ufeff]+))))|(?:((?:(?:[.#](?:(?!-?\\d)(?:[a-zA-Z0-9\\xA0-\\uFFFF_-])+)))))|(?:((?:(?:(?<==)(?:true|false)))))|(?:((?:(?:(?<==)-?(?:(?:0[xX][\\da-fA-F](?:_?[\\da-fA-F])*|0[oO][0-7](?:_?[0-7])*|0[bB][01](?:_?[01])*)n?|-?0n|-?[1-9](?:_?\\d)*n|(?:(?:0(?!\\d)|0\\d*[89]\\d*|[1-9](?:_?\\d)*)(?:\\.(?:\\d(?:_?\\d)*)?)?|\\.\\d(?:_?\\d)*)(?:[eE][+-]?\\d(?:_?\\d)*)?|-?0[0-7]+)))))|(?:((?:(?:(?<==)'(?!.*&[0-9a-zA-Z]+;)[^'\\\\]*(?:\\\\.|\\\\n[^\"\\\\]*|&[^0-9a-zA-Z;]*)*'))))|(?:((?:(?:(?<==)\"(?!.*&[0-9a-zA-Z]+;)[^\"\\\\]*(?:\\\\.|\\\\n[^\"\\\\]*|&[^0-9a-zA-Z;]*)*\"))))|(?:((?:(?:(?<==)[^\"\\s'`=<>\\x00]+))))|(?:((?:(?:(?:(?![\\s\\x00\\x22\\x27\\x3E\\x2F\\x3D\\x00-\\x1F\\x7F-\\x9F])[^\\s\\x00-\\x1F\\x7F-\\x9F\\x22\\x27\\x3E\\x2F\\x3D])+))))|(?:((?:(?:(?:=))))))";
+function scanAttributeLexer(compile,input){
+  const regex=compile(mooAttributePattern);
+  regex.lastIndex=0;
+  const tokens=[];
+  while(regex.lastIndex<input.length){
+    const match=regex.exec(input);
+    assert.ok(match,'Moo attribute lexer failed at '+regex.lastIndex+' in '+JSON.stringify(input));
+    assert.ok(match[0].length>0,'Moo attribute lexer returned an empty token');
+    tokens.push({text:match[0],index:match.index,captures:Array.from(match).slice(1),lastIndex:regex.lastIndex});
+  }
+  return tokens;
+}
+for(const input of ['index="0"','index=0','enabled=true','enabled="true"','data-x=nonquoted']){
+  const actual=scanAttributeLexer(pattern=>legacy(pattern,'ym'),input);
+  const expected=scanAttributeLexer(pattern=>new RegExp(pattern,'ymd'),input);
+  assert.deepEqual(actual,expected,'Moo full-token scan '+JSON.stringify(input));
+}
+assert.deepEqual(scanAttributeLexer(pattern=>legacy(pattern,'ym'),'index="0"').map(token=>token.text),['index','=','"0"']);
+assert.deepEqual(scanAttributeLexer(pattern=>legacy(pattern,'ym'),'index=0').map(token=>token.text),['index','=','0']);
+assert.deepEqual(scanAttributeLexer(pattern=>legacy(pattern,'ym'),'enabled=true').map(token=>token.text),['enabled','=','true']);
+comparisons+=5;
 console.log(comparisons+' native/legacy match, split and sticky comparisons passed');

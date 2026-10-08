@@ -25,6 +25,7 @@
 		B10000000000000000000016 /* legacy-regexp.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000016; };
 		B10000000000000000000017 /* legacy-module-loader.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000017; };
 		B10000000000000000000018 /* Vendor/acorn.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000018; };
+		B10000000000000000000019 /* reduced-motion.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000019; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,7 @@
 		B20000000000000000000016 /* legacy-regexp.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "legacy-regexp.js"; sourceTree = "<group>"; };
 		B20000000000000000000017 /* legacy-module-loader.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "legacy-module-loader.js"; sourceTree = "<group>"; };
 		B20000000000000000000018 /* Vendor/acorn.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "Vendor/acorn.js"; sourceTree = "<group>"; };
+		B20000000000000000000019 /* reduced-motion.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "reduced-motion.js"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -147,6 +149,7 @@
 				B20000000000000000000017 /* legacy-module-loader.js */,
 				B20000000000000000000016 /* legacy-regexp.js */,
 				B20000000000000000000015 /* chatgpt.js */,
+				B20000000000000000000019 /* reduced-motion.js */,
 				A2000000000000000000000A /* Assets.xcassets */,
 				A2000000000000000000000B /* Info.plist */,
 			);
@@ -216,6 +219,7 @@
 				B10000000000000000000017 /* legacy-module-loader.js in Resources */,
 				B10000000000000000000016 /* legacy-regexp.js in Resources */,
 				B10000000000000000000015 /* chatgpt.js in Resources */,
+				B10000000000000000000019 /* reduced-motion.js in Resources */,
 				A1000000000000000000000A /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -288,7 +292,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ChatGPTWeb/Resources/Info.plist;
@@ -310,7 +314,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ChatGPTWeb/Resources/Info.plist;

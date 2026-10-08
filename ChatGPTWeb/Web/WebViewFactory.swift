@@ -5,10 +5,20 @@ enum WebViewFactory {
     static func makeConfiguration() -> WKWebViewConfiguration {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
+        configuration.ignoresViewportScaleLimits = false
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         configuration.preferences.isFraudulentWebsiteWarningEnabled = true
+        if let url = Bundle.main.url(forResource: "reduced-motion", withExtension: "js"),
+           let source = try? String(contentsOf: url, encoding: .utf8) {
+            let options = "window.__webShellReduceMotion = \(ShellSettings.liteMode);\n"
+            configuration.userContentController.addUserScript(WKUserScript(
+                source: "if(window===window.top && location.protocol==='https:' && location.hostname==='chatgpt.com'){" + options + source + "}",
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            ))
+        }
         if let url = Bundle.main.url(forResource: "chatgpt", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             let options = "window.__webShellOptions = {lite: \(ShellSettings.liteMode), debug: \(ShellSettings.performanceLogging)};\n"

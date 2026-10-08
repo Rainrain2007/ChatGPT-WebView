@@ -22,6 +22,16 @@
       ['(?<=\\n)', (s,p) => p>0 && s[p-1]==='\n'],
       ['(?<==)', (s,p) => p>0 && s[p-1]==='='],
       ['(?<!`)', (s,p) => p===0 || s[p-1]!=='`'],
+      ['(?<=<[A-Za-z][\\w.:-]*)', (s,p) => {
+        let i=p;
+        while(i>0) {
+          const c=s.charCodeAt(i-1);
+          if((c>=65&&c<=90)||(c>=97&&c<=122)||(c>=48&&c<=57)||c===95||c===46||c===58||c===45)i--;
+          else break;
+        }
+        const first=s.charCodeAt(i);
+        return i<p && i>0 && s.charCodeAt(i-1)===60 && ((first>=65&&first<=90)||(first>=97&&first<=122));
+      }],
       ['(?<=^|\\s|\\p{P}|\\p{S})', (s,p) => p===0 || boundary.test(previousCodePoint(s,p))],
       ['(?<![\\p{L}\\p{N}_$\\\\])', (s,p) => p===0 || !identifier.test(previousCodePoint(s,p))]
     ];
@@ -55,7 +65,23 @@
     }
     const internalFlags=flags.includes('d')?flags:flags+'d';
     const regex = new NativeRegExp(source, internalFlags);
-    const search = new NativeRegExp(source, internalFlags.includes('g') || internalFlags.includes('y') ? internalFlags : internalFlags+'g');
+    const searchFlags=internalFlags.includes('g') || internalFlags.includes('y') ? internalFlags : internalFlags+'g';
+    const search = new NativeRegExp(source, searchFlags);
+    const searchVariants=new Map();
+    const searchForDisabledMarkers=disabled=>{
+      if(!disabled.size)return search;
+      const key=markers.map((_,i)=>disabled.has(i)?'1':'0').join('');
+      let variant=searchVariants.get(key);
+      if(variant)return variant;
+      let variantSource=source;
+      for(let i=0;i<markers.length;i++)if(disabled.has(i)){
+        const group='(?<'+markers[i].name+'>)';
+        variantSource=variantSource.split(group).join('(?<'+markers[i].name+'>(?!))');
+      }
+      variant=new NativeRegExp(variantSource,searchFlags);
+      searchVariants.set(key,variant);
+      return variant;
+    };
     Object.defineProperties(regex, {
       source: {value: original, configurable: true},
       flags: {value: flags, configurable: true},
@@ -68,15 +94,59 @@
         const input = String(value), initial = this.lastIndex;
         if (profile) {profile.calls++; profile.chars += input.length;}
         try {
-        search.lastIndex = this.global || this.sticky ? initial : 0;
+        let searchFrom=this.global || this.sticky ? initial : 0;
         let match;
-        while ((match = nativeExec.call(search, input))) {
-          if (profile) profile.candidates++;
-          if (markers.every(marker=>{
-            const position=match.indices.groups[marker.name];
-            return position===undefined || marker.test(input,position[0]);
-          })) {
-            if (this.global || this.sticky) this.lastIndex = search.lastIndex;
+        while (true) {
+          const disabledMarkers=new Set();
+          let disabledAt=null;
+          let candidateSearch=search;
+          while(true){
+            candidateSearch=searchForDisabledMarkers(disabledMarkers);
+            candidateSearch.lastIndex=searchFrom;
+            match=nativeExec.call(candidateSearch,input);
+            if(!match){
+              if(!this.sticky && disabledAt!==null){
+                searchFrom=disabledAt+1;
+                disabledMarkers.clear();
+                disabledAt=null;
+                if(this.unicode && /[\uD800-\uDBFF]/.test(input[searchFrom-1]) && /[\uDC00-\uDFFF]/.test(input[searchFrom]))searchFrom++;
+                continue;
+              }
+              break;
+            }
+            if(disabledAt!==null && match.index!==disabledAt){
+              disabledMarkers.clear();
+              disabledAt=null;
+              searchFrom=match.index;
+              continue;
+            }
+            if (profile) profile.candidates++;
+            const failedMarkers=[];
+            for(let i=0;i<markers.length;i++){
+              const marker=markers[i];
+              if(!match.groups || match.groups[marker.name]===undefined)continue;
+              const position=match.indices && match.indices.groups && match.indices.groups[marker.name];
+              if(position===undefined || !marker.test(input,position[0]))failedMarkers.push(i);
+            }
+            if(failedMarkers.length){
+              if (profile) profile.rejected++;
+              // A failed assertion must reject only its current regex path.
+              // Make that assertion impossible and retry at the same index so
+              // the engine can select a later alternation, as native lookbehind
+              // would. This preserves capture slots and token priority.
+              let added=false;
+              for(const index of failedMarkers)if(!disabledMarkers.has(index)){
+                disabledMarkers.add(index);added=true;
+              }
+              if(added){if(disabledAt===null)disabledAt=match.index;searchFrom=match.index;continue;}
+              if (this.sticky) break;
+              searchFrom=match.index+1;
+              disabledMarkers.clear();
+              disabledAt=null;
+              if(this.unicode && /[\uD800-\uDBFF]/.test(input[match.index]) && /[\uDC00-\uDFFF]/.test(input[searchFrom]))searchFrom++;
+              continue;
+            }
+            if (this.global || this.sticky) this.lastIndex = candidateSearch.lastIndex;
             const values=[match[0]],indices=[match.indices[0]];
             for(let i=1;i<=originalCapture;i++){values.push(match[captures[i]]);indices.push(match.indices[captures[i]]);}
             values.index=match.index;values.input=match.input;
@@ -86,11 +156,7 @@
             if(flags.includes('d')){indices.groups=Object.keys(indexGroups).length?indexGroups:undefined;values.indices=indices;}
             return values;
           }
-          if (profile) profile.rejected++;
-          if (this.sticky) break;
-          let next = match.index+1;
-          if (this.unicode && /[\uD800-\uDBFF]/.test(input[match.index]) && /[\uDC00-\uDFFF]/.test(input[next])) next++;
-          search.lastIndex = next;
+          break;
         }
         if (this.global || this.sticky) this.lastIndex = 0;
         return null;
