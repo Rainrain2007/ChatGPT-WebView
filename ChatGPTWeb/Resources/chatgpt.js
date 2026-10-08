@@ -66,7 +66,13 @@
     clearTimeout(styleDefaultsTimer);
     if (!enabled) { window.__shellStyleDefaults?.set(false); return; }
     // Let initial stylesheet loading settle before the version-gated change.
-    styleDefaultsTimer = setTimeout(() => window.__shellStyleDefaults?.set(true), 2500);
+    styleDefaultsTimer = setTimeout(() => {
+      const apply = () => {
+        if (document.documentElement.hasAttribute('data-shell-lite')) window.__shellStyleDefaults?.set(true);
+      };
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(apply, {timeout: 1500});
+      else apply();
+    }, 2500);
   };
   window.__setShellLite = enabled => {
     document.documentElement.toggleAttribute('data-shell-lite', !!enabled);
@@ -76,6 +82,24 @@
   window.__setShellLite(options.lite);
   if (document.readyState !== 'complete') {
     window.addEventListener('load', () => scheduleStyleDefaults(document.documentElement.hasAttribute('data-shell-lite')), {once: true});
+  }
+  // A route can lazily add CSS. The helper immediately restores original rules;
+  // after stylesheet activity settles, recheck the full version and cascade gates.
+  const stylesheetNode = node => node?.nodeType === 1 &&
+    (node.tagName === 'STYLE' || (node.tagName === 'LINK' && /stylesheet/i.test(node.rel || '')));
+  const stylesheetTree = node => stylesheetNode(node) || !!node?.querySelector?.('style,link[rel~="stylesheet"]');
+  if (document.head) {
+    new MutationObserver(records => {
+      const changed = records.some(record =>
+        (record.type === 'childList' && (stylesheetNode(record.target) ||
+          [...record.addedNodes, ...record.removedNodes].some(stylesheetTree))) ||
+        (record.type === 'characterData' && record.target.parentElement?.closest('style')) ||
+        (record.type === 'attributes' && stylesheetNode(record.target)));
+      if (changed) scheduleStyleDefaults(document.documentElement.hasAttribute('data-shell-lite'));
+    }).observe(document.head, {subtree: true, childList: true, characterData: true, attributes: true});
+    document.head.addEventListener('load', event => {
+      if (stylesheetNode(event.target)) scheduleStyleDefaults(document.documentElement.hasAttribute('data-shell-lite'));
+    }, true);
   }
 
   // Keep native touch/trackpad scrolling and defer sortable row presses until
