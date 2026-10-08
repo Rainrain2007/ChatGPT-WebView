@@ -33,6 +33,7 @@
     layoutStyle.id = 'chatgpt-shell-legacy-layout';
     layoutStyle.textContent = `
       body > .fixed.-translate-y-full {translate:var(--tw-translate-x,0) -100%!important}
+      .codex-dialog.left-1\\/2.top-1\\/2.-translate-x-1\\/2.-translate-y-1\\/2 {translate:-50% -50%!important}
       nav[role="navigation"] .after\\:bg-text\\/10::after {background:currentColor!important;opacity:.1!important}
     `;
     (document.head || document.documentElement).appendChild(layoutStyle);
